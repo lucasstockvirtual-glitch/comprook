@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procesador de Comprobantes</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2335;
+    --border: #2a3050;
+    --accent: #4f8ef7;
+    --accent2: #7c3aed;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e8eaf0;
+    --text2: #8892aa;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-top: 16px;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+
+  header p {
+    color: var(--text2);
+    font-size: 0.85rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(79, 142, 247, 0.05);
+  }
+
+  .drop-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+  }
+
+  .drop-zone h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .drop-zone p {
+    font-size: 0.8rem;
+    color: var(--text2);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    width: 100%;
+    justify-content: center;
+    font-size: 1rem;
+    padding: 14px;
+  }
+
+  .btn-primary:hover { background: #3a7de8; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-success {
+    background: var(--green);
+    color: white;
+    width: 100%;
+    justify-content: center;
+    font-size: 1rem;
+    padding: 14px;
+  }
+
+  .btn-success:hover { background: #16a34a; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    padding: 8px 14px;
+  }
+
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+
+  .progress-bar {
+    background: var(--surface2);
+    border-radius: 99px;
+    height: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    border-radius: 99px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  .log {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px;
+    max-height: 120px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text2);
+    margin-bottom: 16px;
+  }
+
+  .log-line { margin-bottom: 3px; }
+  .log-line.ok { color: var(--green); }
+  .log-line.err { color: var(--red); }
+  .log-line.info { color: var(--accent); }
+
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    min-width: 500px;
+  }
+
+  thead th {
+    background: var(--surface2);
+    padding: 10px 12px;
+    text-align: left;
+    color: var(--text2);
+    font-weight: 500;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  tbody td {
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.65rem;
+    font-weight: 500;
+  }
+
+  .badge-ok { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-err { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-proc { background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+  .section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .file-count {
+    display: inline-block;
+    background: rgba(79,142,247,0.15);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    margin-left: 8px;
+  }
+
+  .actions-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  #empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--text2);
+    font-size: 0.85rem;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📄 Procesador de Comprobantes</h1>
+  <p>Subí tus imágenes y descargá el Excel automáticamente</p>
+</header>
+
+<!-- Upload -->
+<div class="card">
+  <div class="section-title">1. Seleccioná las imágenes <span id="file-count-badge" class="file-count" style="display:none">0</span></div>
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" multiple accept="image/*">
+    <div class="drop-icon">📁</div>
+    <h3>Tocá para elegir imágenes</h3>
+    <p>Podés seleccionar toda una carpeta a la vez</p>
+  </div>
+</div>
+
+<!-- Process -->
+<div class="card">
+  <div class="section-title">2. Procesá los comprobantes</div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="stat-total">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-ok" style="color:var(--green)">0</div>
+      <div class="stat-label">Procesados</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-err" style="color:var(--red)">0</div>
+      <div class="stat-label">Errores</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+  <div class="log" id="log"><div class="log-line info">Esperando imágenes...</div></div>
+  <button class="btn btn-primary" id="btn-process" disabled onclick="procesarTodos()">
+    ⚡ Procesar comprobantes
+  </button>
+</div>
+
+<!-- Results -->
+<div class="card">
+  <div class="section-title">3. Resultados</div>
+  <div class="actions-row">
+    <button class="btn btn-outline" onclick="limpiarTabla()">🗑 Limpiar</button>
+    <button class="btn btn-outline" onclick="limpiarErrores()">✕ Quitar errores</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Monto</th>
+          <th>Nombre y Apellido</th>
+          <th>CUIT/CUIL</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body">
+        <tr><td colspan="6" id="empty-state">Los resultados aparecerán acá</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Download -->
+<div class="card">
+  <div class="section-title">4. Descargá el Excel</div>
+  <button class="btn btn-success" id="btn-download" onclick="descargarExcel()">
+    📥 Descargar Excel
+  </button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const API_KEY = "AIzaSyCLOqVVuxxduxoXMQ8cK-hIo31nb1KuZ28";
+const MODELOS = [
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-latest",
+  "gemini-pro-vision",
+  "gemini-1.0-pro-vision-latest"
+];
+let modeloActivo = null;
+
+async function detectarModelo() {
+  for (const modelo of MODELOS) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${API_KEY}`;
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: "hola" }] }] })
+      });
+      if (resp.status !== 404) {
+        modeloActivo = modelo;
+        log(`Modelo activo: ${modelo}`, 'ok');
+        return url;
+      }
+    } catch(e) {}
+  }
+  throw new Error("No se encontró ningún modelo disponible");
+}
+
+let API_URL = null;
+
+let archivos = [];
+let resultados = [];
+let procesando = false;
+
+// File input
+document.getElementById('file-input').addEventListener('change', e => {
+  archivos = Array.from(e.target.files);
+  actualizarUI();
+});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  archivos = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  actualizarUI();
+});
+
+function actualizarUI() {
+  const n = archivos.length;
+  const badge = document.getElementById('file-count-badge');
+  badge.textContent = n;
+  badge.style.display = n > 0 ? 'inline-block' : 'none';
+  document.getElementById('stat-total').textContent = n;
+  document.getElementById('btn-process').disabled = n === 0;
+  log(`${n} imagen${n !== 1 ? 'es' : ''} seleccionada${n !== 1 ? 's' : ''}`, 'info');
+}
+
+function log(msg, tipo = '') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + tipo;
+  line.textContent = `[${new Date().toLocaleTimeString('es-AR')}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function procesarImagen(file) {
+  const b64 = await fileToBase64(file);
+  const prompt = `Analizá este comprobante de transferencia bancaria y extraé exactamente estos datos:
+1. FECHA: la fecha del comprobante (formato DD/MM/YYYY)
+2. MONTO: el monto transferido (solo números con punto decimal, sin símbolos ni puntos de miles, ej: 104000.00)
+3. NOMBRE: nombre y apellido completo del TRANSFERENTE (quien envía el dinero, campo "De" o "Origen")
+4. CUIT: CUIT o CUIL del transferente (solo números y guiones, ej: 20-12345678-9)
+
+Respondé SOLO con este formato JSON exacto, sin texto adicional:
+{"fecha":"","monto":"","nombre":"","cuit":""}
+
+Si algún dato no está visible, dejá el campo vacío "".`;
+
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } }
+      ]
+    }]
+  };
+
+  const resp = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+async function procesarTodos() {
+  if (procesando || archivos.length === 0) return;
+  procesando = true;
+  document.getElementById('btn-process').disabled = true;
+
+  if (!API_URL) {
+    log('Detectando modelo disponible...', 'info');
+    try {
+      API_URL = await detectarModelo();
+    } catch(e) {
+      log('Error: ' + e.message, 'err');
+      procesando = false;
+      document.getElementById('btn-process').disabled = false;
+      return;
+    }
+  }
+
+  let ok = 0, err = 0;
+  const total = archivos.length;
+
+  // Limpiar filas anteriores de esta tanda
+  document.getElementById('empty-state')?.remove();
+
+  for (let i = 0; i < total; i++) {
+    const file = archivos[i];
+    log(`Procesando ${i + 1}/${total}: ${file.name}`);
+
+    try {
+      const datos = await procesarImagen(file);
+      ok++;
+      resultados.push({ ...datos, archivo: file.name, estado: 'ok' });
+      agregarFila(datos, file.name, 'ok');
+      log(`✓ ${file.name} → ${datos.nombre || '(sin nombre)'} $${datos.monto}`, 'ok');
+    } catch (e) {
+      err++;
+      resultados.push({ fecha: '', monto: '', nombre: '', cuit: '', archivo: file.name, estado: 'error' });
+      agregarFila({}, file.name, 'error');
+      log(`✗ Error en ${file.name}: ${e.message}`, 'err');
+    }
+
+    document.getElementById('stat-ok').textContent = ok;
+    document.getElementById('stat-err').textContent = err;
+    document.getElementById('progress').style.width = `${((i + 1) / total * 100).toFixed(0)}%`;
+
+    // Pequeña pausa para no saturar la API
+    if (i < total - 1) await new Promise(r => setTimeout(r, 300));
+  }
+
+  log(`Completado: ${ok} OK, ${err} errores`, 'info');
+  procesando = false;
+  document.getElementById('btn-process').disabled = false;
+}
+
+let filaNum = 0;
+function agregarFila(datos, archivo, estado) {
+  filaNum++;
+  const tbody = document.getElementById('tabla-body');
+  const tr = document.createElement('tr');
+  tr.dataset.estado = estado;
+  const badge = estado === 'ok'
+    ? '<span class="badge badge-ok">✓ OK</span>'
+    : '<span class="badge badge-err">✗ Error</span>';
+  tr.innerHTML = `
+    <td>${filaNum}</td>
+    <td>${datos.fecha || ''}</td>
+    <td>${datos.monto || ''}</td>
+    <td>${datos.nombre || ''}</td>
+    <td>${datos.cuit || ''}</td>
+    <td>${badge}</td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function limpiarTabla() {
+  resultados = [];
+  filaNum = 0;
+  document.getElementById('tabla-body').innerHTML =
+    '<tr><td colspan="6" id="empty-state">Los resultados aparecerán acá</td></tr>';
+  document.getElementById('stat-ok').textContent = 0;
+  document.getElementById('stat-err').textContent = 0;
+  document.getElementById('progress').style.width = '0%';
+}
+
+function limpiarErrores() {
+  resultados = resultados.filter(r => r.estado === 'ok');
+  const rows = document.querySelectorAll('#tabla-body tr');
+  rows.forEach(r => { if (r.dataset.estado === 'error') r.remove(); });
+  document.getElementById('stat-err').textContent = 0;
+}
+
+function descargarExcel() {
+  if (resultados.length === 0) { alert('No hay datos para exportar'); return; }
+  const datos_ok = resultados.filter(r => r.estado === 'ok');
+  if (datos_ok.length === 0) { alert('No hay registros válidos'); return; }
+
+  const ws_data = [
+    ['Fecha', 'Monto', 'Nombre y Apellido', 'CUIT/CUIL'],
+    ...datos_ok.map(r => [r.fecha, r.monto, r.nombre, r.cuit])
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  ws['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 30 }, { wch: 20 }];
+
+  // Formato texto para columna Monto
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = 1; R <= range.e.r; R++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: R, c: 1 })];
+    if (cell) cell.t = 's';
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Comprobantes');
+
+  const fecha = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
+  XLSX.writeFile(wb, `comprobantes_${fecha}.xlsx`);
+}
+</script>
+</body>
+</html>
